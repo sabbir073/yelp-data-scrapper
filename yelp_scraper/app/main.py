@@ -14,6 +14,7 @@ from app.chrome_control import setup_driver
 from app.yelp_scraper import scrape_yelp_all_pages
 from app.sheets import read_input_sheet, write_to_output_sheet
 from app.config import MAX_PAGES
+from app.utils import deduplicate_results
 
 def main():
     """
@@ -63,7 +64,9 @@ def main():
         # Write all results to Google Sheets
         if all_results:
             print(f"\n📝 Writing {len(all_results)} total results to Google Sheets...")
-            write_to_output_sheet(all_results)
+            unique_results = deduplicate_results(all_results, key="ID")
+            print(f"📝 After deduplication: {len(unique_results)} unique results")
+            write_to_output_sheet(unique_results)
             print("✅ All results written successfully!")
         else:
             print("❌ No results to write")

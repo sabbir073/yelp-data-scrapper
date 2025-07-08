@@ -1,7 +1,9 @@
 import re
+import time
 from urllib.parse import urlparse, parse_qs, unquote
 from selenium.webdriver.common.by import By
 from .yelp_selectors import *
+from .utils import take_screenshot
 
 def extract_business_id(url):
     """
@@ -82,8 +84,12 @@ def parse_business_data(driver, business_url):
     # Extract business ID
     biz_id = extract_business_id(business_url)
     
-    # Extract basic information
-    title = safe_text(driver, BUSINESS_TITLE)
+    # Extract basic information with fallback selectors
+    title = try_multiple_selectors(driver, BUSINESS_TITLE_ALTERNATIVES + [BUSINESS_TITLE])
+    if not title:
+        take_screenshot(driver, f"title_not_found_{int(time.time())}.png")
+        print("⚠️  Title not found, skipping this business.")
+        return None
     categories = ", ".join(safe_list(driver, BUSINESS_CATEGORIES))
     
     # Extract website (with redirect handling)

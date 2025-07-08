@@ -4,7 +4,7 @@ from selenium.webdriver.common.keys import Keys
 from .chrome_control import setup_driver, wait_for_element, safe_click, switch_to_new_tab, close_current_tab
 from .yelp_selectors import *
 from .parsers import parse_business_data
-from .utils import random_delay, human_like_delay, clear_input_field, wait_for_page_load, handle_captcha
+from .utils import random_delay, human_like_delay, clear_input_field, wait_for_page_load, handle_captcha, close_popups
 from .config import YELP_BASE_URL, DEFAULT_WAIT_TIME, PAGE_LOAD_WAIT, TAB_SWITCH_WAIT, MAX_PAGES
 
 def perform_search(driver, keyword, location):
@@ -86,6 +86,7 @@ def scrape_business_page(driver, business_url):
         
         # Wait for page to load
         wait_for_page_load(driver)
+        close_popups(driver)
         
         # Check for CAPTCHA
         if handle_captcha(driver):
@@ -94,6 +95,10 @@ def scrape_business_page(driver, business_url):
         
         # Parse business data
         data = parse_business_data(driver, business_url)
+        if not data:
+            close_current_tab(driver, switch_to_main=True)
+            random_delay(1, 2)
+            return None
         
         print(f"✅ Scraped: {data['Title']}")
         
@@ -122,9 +127,17 @@ def find_next_page(driver):
             next_button = driver.find_element(By.XPATH, selector)
             if next_button.is_enabled() and next_button.is_displayed():
                 print(f"➡️  Found next page button: {selector}")
-                if safe_click(driver, next_button, delay=2):
-                    time.sleep(PAGE_LOAD_WAIT)
-                    return True
+                # Scroll to the next button before clicking
+                driver.execute_script("arguments[0].scrollIntoView(true);", next_button)
+                time.sleep(1)
+                close_popups(driver)
+                try:
+                    next_button.click()
+                except Exception:
+                    # Try JS click as fallback
+                    driver.execute_script("arguments[0].click();", next_button)
+                time.sleep(PAGE_LOAD_WAIT)
+                return True
         except:
             continue
     

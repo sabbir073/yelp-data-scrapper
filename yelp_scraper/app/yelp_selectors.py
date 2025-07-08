@@ -20,6 +20,14 @@ NEXT_PAGE_SELECTORS = [
 
 # Business Detail Page Selectors
 BUSINESS_TITLE = "//h1"
+BUSINESS_TITLE_ALTERNATIVES = [
+    "//h1[contains(@class,'css-1se8maq')]",
+    "//h1[contains(@class,'css-')]",
+    "//h1",
+    "//div[contains(@class,'businessName')]//h1",
+    "//div[contains(@class,'title')]//h1",
+    "//h1[contains(@class,'title')]"
+]
 BUSINESS_CATEGORIES = "//span[@data-testid='BizHeaderCategory']/a"
 BUSINESS_WEBSITE = "//a[contains(@href,'biz_redir?url=')]"
 BUSINESS_PHONE = "//div[p[1][contains(text(), 'Phone number')]]/p[2]"

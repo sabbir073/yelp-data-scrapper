@@ -141,3 +141,38 @@ def handle_captcha(driver):
         return True
     
     return False 
+
+def deduplicate_results(results, key="ID"):
+    seen = set()
+    deduped = []
+    for item in results:
+        value = item.get(key)
+        if value and value not in seen:
+            seen.add(value)
+            deduped.append(item)
+    return deduped 
+
+def close_popups(driver):
+    """
+    Attempt to close cookie banners and popups on Yelp
+    """
+    popup_selectors = [
+        # Yelp cookie banner
+        "//button[contains(text(),'Accept')]",
+        "//button[contains(text(),'I agree')]",
+        "//button[contains(text(),'Got it')]",
+        "//button[contains(@aria-label,'Close')]",
+        "//button[contains(@class,'close')]",
+        "//button[@id='privacy-banner-accept']",
+        "//button[@data-testid='close-button']"
+    ]
+    for selector in popup_selectors:
+        try:
+            element = driver.find_element_by_xpath(selector)
+            if element.is_displayed() and element.is_enabled():
+                element.click()
+                time.sleep(1)
+                print(f"🧹 Closed popup/banner: {selector}")
+        except Exception:
+            continue
+    return 
