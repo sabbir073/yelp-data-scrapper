@@ -50,7 +50,7 @@ def scrape_task(req: ScrapeRequest):
         all_results = []
         if req.keyword and req.location:
             # Scrape for a single keyword/location
-            results = scrape_yelp_all_pages(driver, req.keyword, req.location)
+            results = scrape_yelp_all_pages(driver, req.keyword, req.location, req.max_pages)
             all_results.extend(results)
         else:
             # Scrape for all from Google Sheets
@@ -60,7 +60,7 @@ def scrape_task(req: ScrapeRequest):
                 location = row.get("location", "")
                 if not keyword or not location:
                     continue
-                results = scrape_yelp_all_pages(driver, keyword, location)
+                results = scrape_yelp_all_pages(driver, keyword, location, req.max_pages)
                 all_results.extend(results)
         unique_results = deduplicate_results(all_results, key="ID")
         SCRAPE_RESULTS.clear()

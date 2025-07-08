@@ -15,19 +15,22 @@ A modular, configurable web scraper for extracting business information from Yel
 ## Project Structure
 
 ```
-yelp_scraper/
+Yelp-Scraper/
 ├── app/
 │   ├── chrome_control.py       # Selenium setup and browser control
 │   ├── yelp_scraper.py         # Main Yelp scraping logic
-│   ├── selectors.py            # XPath/CSS selectors
+│   ├── yelp_selectors.py       # XPath/CSS selectors
 │   ├── parsers.py              # Data extraction and parsing
 │   ├── sheets.py               # Google Sheets integration
 │   ├── utils.py                # Utility functions (delays, screenshots, etc.)
 │   ├── config.py               # Environment configuration
-│   └── main.py                 # Entry point
+│   ├── main.py                 # CLI entry point
+│   ├── api.py                  # FastAPI endpoints
+│   └── main_api.py             # FastAPI entry point
 ├── credentials/
-│   └── service_account.json    # Google Sheets API credentials
+│   └── service_account.json    # Google service account credentials
 ├── .env                        # Environment variables (create from env.example)
+├── env.example                 # Example environment file
 ├── requirements.txt            # Python dependencies
 └── README.md                   # This file
 ```
@@ -37,7 +40,7 @@ yelp_scraper/
 1. **Clone or download the project**
    ```bash
    git clone <repository-url>
-   cd yelp_scraper
+   cd Yelp-Scraper
    ```
 
 2. **Install Python dependencies**
@@ -64,7 +67,7 @@ yelp_scraper/
 
 ## Configuration
 
-Edit the `.env` file to customize the scraper behavior:
+Edit the `.env` file at the project root to customize the scraper behavior:
 
 ```env
 # Google Sheets Configuration
@@ -75,7 +78,9 @@ CREDENTIALS_PATH=credentials/service_account.json
 
 # Selenium Configuration
 CHROME_HEADLESS=False
-CHROME_USER_AGENT=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36...
+CHROME_USER_AGENT_MAC=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+CHROME_USER_AGENT_WINDOWS=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+CHROME_USER_AGENT=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
 
 # Scraping Configuration
 DEFAULT_WAIT_TIME=5
@@ -95,7 +100,7 @@ MAX_PAGES=10
      coffee shops     | New York, NY
      ```
 
-2. **Run the scraper**
+2. **Run the scraper (CLI)**
    ```bash
    python app/main.py
    ```
@@ -158,7 +163,7 @@ The scraper extracts the following data for each business:
 4. **"No business listings found"**
    - Yelp may have changed their HTML structure
    - Check if you're being blocked (try with VPN)
-   - Review selectors in `app/selectors.py`
+   - Review selectors in `app/yelp_selectors.py`
 
 ### Debugging
 
@@ -166,18 +171,100 @@ The scraper extracts the following data for each business:
 - Check the console output for detailed error messages
 - Use `CHROME_HEADLESS=False` to see the browser in action
 
-## Contributing
+## Troubleshooting: Stopping the FastAPI Server & Address Already in Use
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+If you see an error like:
 
-## License
+```
+ERROR:    [Errno 48] Address already in use
+```
 
-MIT License - see LICENSE file for details
+This means the server is already running or another process is using port 8000.
 
-## Disclaimer
+### How to Stop the Server
+- If you started the server in a terminal, **press `Ctrl+C`** in that terminal to stop it.
 
-This tool is for educational purposes only. Please respect Yelp's Terms of Service and robots.txt file. Use responsibly and consider implementing rate limiting for production use. 
+### If the Error Persists
+1. **Find the process using port 8000:**
+   ```bash
+   lsof -i :8000
+   ```
+   - Look for the `PID` (process ID) in the output.
+
+2. **Kill the process:**
+   ```bash
+   kill <PID>
+   ```
+   Replace `<PID>` with the actual number from the previous step.
+
+3. **Try running the server again:**
+   ```bash
+   uvicorn app.api:app --reload
+   ```
+
+---
+
+## Running the FastAPI API Server
+
+To use the Yelp Scraper as a web API, follow these steps:
+
+### On macOS/Linux
+1. **Activate your virtual environment** (if you have one):
+   ```bash
+   source venv/bin/activate
+   ```
+2. **Install dependencies** (if not already done):
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. **Start the FastAPI server** from your project root:
+   ```bash
+   uvicorn app.api:app --reload
+   ```
+   - The `--reload` flag auto-restarts the server on code changes (useful for development).
+
+### On Windows
+1. **Activate your virtual environment** (if you have one):
+   ```bat
+   venv\Scripts\activate
+   ```
+2. **Install dependencies** (if not already done):
+   ```bat
+   pip install -r requirements.txt
+   ```
+3. **Start the FastAPI server** from your project root:
+   ```bat
+   uvicorn app.api:app --reload
+   ```
+
+4. **Open your browser to the API docs:**
+   [http://localhost:8000/docs](http://localhost:8000/docs)
+   - This is the interactive Swagger UI where you can test all endpoints.
+
+5. **Available Endpoints:**
+   - `GET /health` — Health check
+   - `POST /scrape` — Start a scrape (optionally with keyword/location)
+   - `GET /results` — Get the latest results
+   - `GET /status` — Get scrape status
+
+6. **Example: Start a Scrape via Swagger UI**
+   - Go to `/docs`
+   - Click on `POST /scrape`
+   - Click "Try it out"
+   - Enter a JSON body, e.g.:
+     ```json
+     {
+       "keyword": "Pasta",
+       "location": "New York"
+     }
+     ```
+   - Click "Execute"
+
+7. **Stop the server**
+   - Press `Ctrl+C` in the terminal where the server is running.
+
+---
+
+**Note:**
+- You can also use tools like `curl` or Postman to interact with the API.
+- The API will write results to your Google Sheet and return them via the `/results` endpoint. 

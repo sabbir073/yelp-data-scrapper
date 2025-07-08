@@ -143,31 +143,28 @@ def find_next_page(driver):
     
     return False
 
-def scrape_yelp_all_pages(driver, keyword, location):
+def scrape_yelp_all_pages(driver, keyword, location, max_pages=None):
     """
     Scrape all pages of Yelp search results
     """
+    if max_pages is None:
+        from .config import MAX_PAGES
+        max_pages = MAX_PAGES
     # Perform initial search
     if not perform_search(driver, keyword, location):
         return []
-    
     all_results = []
     page_num = 1
-    
-    while page_num <= MAX_PAGES:
+    while page_num <= max_pages:
         print(f"\n📄 Processing page {page_num}...")
-        
         # Check for CAPTCHA
         if handle_captcha(driver):
             time.sleep(3)
-        
         # Find business listings on current page
         listings, selector = find_business_listings(driver)
-        
         if not listings:
             print(f"❌ No business listings found on page {page_num}")
             break
-        
         # Process listings on current page
         page_results = []
         for i in range(len(listings)):
@@ -175,32 +172,25 @@ def scrape_yelp_all_pages(driver, keyword, location):
             listings = driver.find_elements(By.XPATH, selector)
             if i >= len(listings):
                 break
-            
             try:
                 link = listings[i].get_attribute("href")
                 if not link or "yelp.com/biz/" not in link:
                     continue
-                
                 # Scrape business data
                 data = scrape_business_page(driver, link)
                 if data:
                     page_results.append(data)
-                
             except Exception as e:
                 print(f"❌ Error processing listing {i} on page {page_num}: {e}")
                 continue
-        
         # Add page results to all results
         all_results.extend(page_results)
         print(f"✅ Completed page {page_num} with {len(page_results)} results")
-        
         # Check for next page
         if not find_next_page(driver):
             print(f"🏁 No more pages found. Reached the end at page {page_num}")
             break
-        
         page_num += 1
         human_like_delay()
-    
     print(f"🎉 Total results collected: {len(all_results)}")
     return all_results 
